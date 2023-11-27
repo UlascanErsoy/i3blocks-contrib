@@ -44,7 +44,7 @@ if __name__ == "__main__":
         print(f"{icon}{percent}")
         print("")
         print(color)
-    elif status.strip() == "charging":
+    elif status.strip() == "Charging":
         print(f"⚡{percent}")
     elif status.strip() == "Full":
         print("")
