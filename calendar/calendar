@@ -29,12 +29,7 @@ case "$BLOCK_BUTTON" in
 	posX=$(($BLOCK_X - $WIDTH / 2))
 	posY=$(($BLOCK_Y - $HEIGHT))
 
-	i3-msg -q "exec yad --calendar \
-        --width=$WIDTH --height=$HEIGHT \
-	    --undecorated --fixed \
-	    --close-on-unfocus --no-buttons \
-	    --posx=$posX --posy=$posY \
-	    > /dev/null"
+    /usr/bin/google-chrome --new-window https://calendar.google.com/calendar/u/1/r&
 esac
 echo "$LABEL$(date "$DATEFMT")"
 echo "$LABEL$(date "$SHORTFMT")"

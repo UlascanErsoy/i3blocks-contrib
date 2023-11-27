@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import dbus
-import sys
+import sys,os
+import time
 
 def progressBar(perc : float):
     char = ["░", "▒", "█"]
@@ -13,32 +14,79 @@ def progressBar(perc : float):
         bar += char[0]
     return bar
 
+MAX_WIDTH = int(os.getenv("MAX_WIDTH") or 15)
+SCROLL_SPEED= int(os.getenv("SCROLL_SPEED") or 1)
+BTN_CLICK = os.getenv("BLOCK_BUTTON")
+
+DOMAINS = {
+        "spotify":("","#00FFB3"),
+        "chromium":("","#669DF6"),
+        "youtube":("", "#AA2222")
+        }
+
+def get_glyph(domain: str):
+    """
+    """
+    company = domain.split("/")[2]
+    return DOMAINS.get(company, (">","#FFFFFF"))
+
+def calc_scroll(text: str):
+    """
+    """
+    secs = (SCROLL_SPEED * (int(time.time())%len(text)))%len(text)
+    return f"{text} {text}"[secs : secs + MAX_WIDTH] if len(text) > MAX_WIDTH else text
+
 def main():
+    
     bus = dbus.SessionBus()
-    proxy = bus.get_object('org.mpris.MediaPlayer2.spotifyd','/org/mpris/MediaPlayer2')
 
-    properties_manager = dbus.Interface(proxy, 'org.freedesktop.DBus.Properties')
+    chosen = None
 
-    if properties_manager:
+    for service in bus.list_names():
+        if service.startswith('org.mpris.MediaPlayer2.'):
+            proxy = dbus.SessionBus().get_object(service, '/org/mpris/MediaPlayer2')
 
-        if len(sys.argv) > 1:
-            if sys.argv[1] == "1":
-                dbus.Interface(proxy, 'org.mpris.MediaPlayer2.Player').PlayPause()
+            properties_manager = dbus.Interface(proxy, 'org.freedesktop.DBus.Properties')
 
-        status = properties_manager.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')
-        if status == "Playing" : status = " "
-        else : status = " "
+            if properties_manager:
 
-        current = properties_manager.Get('org.mpris.MediaPlayer2.Player', 'Position')
+                #if len(sys.argv) > 1:
+                #    if sys.argv[1] == "1":
+                #        dbus.Interface(proxy, 'org.mpris.MediaPlayer2.Player').PlayPause()
 
-        data = properties_manager.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
-        length = data["mpris:length"]
-        title = data["xesam:title"]
+                status = properties_manager.Get('org.mpris.MediaPlayer2.Player', 'PlaybackStatus')
+                if chosen is None:
+                    chosen = proxy 
+                elif status == "Playing":
+                    chosen = proxy 
 
-        perc = current / length
-        progress = progressBar(perc)
-        bar = f" [ {title} ]  {status} {progress}"
-        print(bar)
+    if chosen is None:
+        return
+
+    
+    if BTN_CLICK == "1":
+        dbus.Interface(chosen, "org.mpris.MediaPlayer2.Player").PlayPause()
+
+    chosen = dbus.Interface(chosen, "org.freedesktop.DBus.Properties")
+    status = chosen.Get("org.mpris.MediaPlayer2.Player", "PlaybackStatus")
+    if status == "Playing" : status = " "
+    else : status = " "
+
+    current = chosen.Get('org.mpris.MediaPlayer2.Player', 'Position')
+
+    data = chosen.Get('org.mpris.MediaPlayer2.Player', 'Metadata')
+    length = data["mpris:length"]
+    title = data["xesam:title"]
+    domain = data["mpris:trackid"]
+
+    perc = current / length
+    progress = progressBar(perc)
+    glyph,color = get_glyph(domain)
+    scroll = calc_scroll(title)
+    bar = f"{glyph} [ {scroll} ]  {status} {progress}"#
+    print(bar)
+    print()
+    print(color)
 
 if __name__ == "__main__":
     main()
